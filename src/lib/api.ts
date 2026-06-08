@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:4000/api';
+const API_BASE = '/api';
 
 async function getToken(): Promise<string | null> {
   try {
@@ -43,7 +43,7 @@ export const api = {
   getProjects: () => request('/projects'),
   getProject: (id: string) => request(`/projects/${id}`),
   deleteProject: (id: string) => request(`/projects/${id}`, { method: 'DELETE' }),
-  downloadProject: (id: string) => `${API_BASE}/projects/${id}/download`,
+  downloadProject: (id: string) => `/api/projects/${id}/download`,
 
   getAdminStats: () => request('/admin/stats'),
   getAdminLogs: () => request('/admin/logs'),
