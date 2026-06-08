@@ -11,7 +11,7 @@
     "dev:server": "node --experimental-strip-types server/index.ts",
     "dev:all": "node --experimental-strip-types server/index.ts & vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
-    "start": "node --experimental-strip-types server/index.ts",
+    "start": "npx tsx server/index.ts",
     "preview": "vite preview",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "lint": "tsc --noEmit",
