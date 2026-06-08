@@ -2,9 +2,7 @@ const API_BASE = '/api';
 
 async function getToken(): Promise<string | null> {
   try {
-    if ((window as any).Clerk?.session) {
-      return await (window as any).Clerk.session.getToken();
-    }
+    return localStorage.getItem('demo_token');
   } catch {}
   return null;
 }
