@@ -20,7 +20,8 @@ import {
 } from 'lucide-react';
 import { Page } from '../types';
 import { cn } from '../lib/utils';
-import { useAuth } from '@clerk/clerk-react';
+import { DemoContext } from '../context/DemoAuth';
+import { useContext } from 'react';
 
 // --- SHARED COMPONENTS ---
 
@@ -65,7 +66,7 @@ export function Button({
 }
 
 export function Sidebar({ currentPage, onNavigate }: { currentPage: Page, onNavigate: (page: Page) => void }) {
-  const { signOut } = useAuth();
+  const { signOut } = useContext(DemoContext);
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'projects', label: 'My Projects', icon: Share2 },

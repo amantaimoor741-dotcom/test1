@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ClerkProvider, useAuth, useUser } from '@clerk/clerk-react';
 import { Page } from './types';
+import { DemoContext } from './context/DemoAuth';
 
-// Importing all pages
 import LandingPage from './pages/LandingPage';
+import AuraLandingPage from './pages/AuraLandingPage';
 import { LoginPage, SignupPage, ForgotPasswordPage } from './pages/AuthPages';
 import Dashboard from './pages/Dashboard';
 import UploadPage from './pages/UploadPage';
@@ -20,9 +20,15 @@ import SettingsPage from './pages/SettingsPage';
 import { PricingPage, AboutPage, ContactPage } from './pages/MarketingPages';
 
 function AppContent() {
-  const [currentPage, setCurrentPage] = useState<Page>('landing');
-  const { isSignedIn } = useAuth();
-  const { user } = useUser();
+  const [currentPage, setCurrentPage] = useState<Page>(() => {
+    const saved = sessionStorage.getItem('currentPage');
+    return (saved as Page) || 'landing';
+  });
+  const { isSignedIn } = useContext(DemoContext);
+
+  React.useEffect(() => {
+    sessionStorage.setItem('currentPage', currentPage);
+  }, [currentPage]);
 
   const navigate = (page: Page) => {
     if (!isSignedIn && ['dashboard', 'upload', 'processing', 'preview', 'admin', 'settings'].includes(page)) {
@@ -34,7 +40,7 @@ function AppContent() {
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'landing': return <LandingPage onNavigate={navigate} />;
+      case 'landing': return <AuraLandingPage onNavigate={navigate} />;
       case 'login': return <LoginPage onNavigate={navigate} />;
       case 'signup': return <SignupPage onNavigate={navigate} />;
       case 'forgot-password': return <ForgotPasswordPage onNavigate={navigate} />;
@@ -47,7 +53,7 @@ function AppContent() {
       case 'pricing': return <PricingPage onNavigate={navigate} />;
       case 'about': return <AboutPage onNavigate={navigate} />;
       case 'contact': return <ContactPage onNavigate={navigate} />;
-      default: return <LandingPage onNavigate={navigate} />;
+      default: return <AuraLandingPage onNavigate={navigate} />;
     }
   };
 
@@ -69,13 +75,6 @@ function AppContent() {
   );
 }
 
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || 'pk_test_Z3JhbmQtbGlvbj04Ny5jbGVyay5hY2NvdW50cy5kZXYk';
-
 export default function App() {
-  return (
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-      <AppContent />
-    </ClerkProvider>
-  );
+  return <AppContent />;
 }
-

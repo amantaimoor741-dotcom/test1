@@ -8,7 +8,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Sidebar, Button } from '../components/Shared';
 import { Page } from '../types';
 import { cn } from '../lib/utils';
-import { useUser } from '@clerk/clerk-react';
+import { useUser } from '../context/DemoAuth';
 import { api } from '../lib/api';
 
 const chartData = [

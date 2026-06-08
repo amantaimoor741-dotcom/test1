@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { motion } from 'motion/react';
 import { 
   Sparkles, 
@@ -6,14 +6,14 @@ import {
   Lock, 
   User, 
   ArrowRight, 
-  Github, 
-  Chrome,
   ChevronLeft,
   Loader2
 } from 'lucide-react';
-import { useSignIn, useSignUp } from '@clerk/clerk-react';
 import { Button } from '../components/Shared';
 import { Page } from '../types';
+import { DemoContext } from '../context/DemoAuth';
+
+const API = '/api/auth';
 
 function AuthLayout({ 
   children, 
@@ -30,11 +30,9 @@ function AuthLayout({
 }) {
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
-      {/* Left Decoration (Desktop) */}
       <div className="hidden md:flex flex-1 bg-primary relative items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-linear-to-br from-primary via-secondary to-accent opacity-90" />
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_20%_30%,rgba(255,255,255,0.2),transparent)]" />
-        
         <div className="relative z-10 text-center px-12">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -49,13 +47,10 @@ function AuthLayout({
             The world's most advanced document-to-web AI engine.
           </p>
         </div>
-
-        {/* Floating Abstract Shapes */}
         <div className="absolute bottom-[-10%] left-[-10%] w-64 h-64 border-4 border-white/10 rounded-full" />
         <div className="absolute top-[10%] right-[-5%] w-48 h-48 border-2 border-white/5 rounded-full" />
       </div>
 
-      {/* Right Form Side */}
       <div className="flex-1 flex flex-col items-center justify-center p-8 md:p-16 relative">
         {showBack && (
           <button 
@@ -73,15 +68,6 @@ function AuthLayout({
           </div>
 
           {children}
-
-          <div className="mt-10 pt-8 border-t border-white/5 flex flex-col gap-4">
-             <button className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-all font-medium text-sm">
-                <Chrome className="size-5" /> Continue with Google
-             </button>
-             <button className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-all font-medium text-sm">
-                <Github className="size-5" /> Continue with GitHub
-             </button>
-          </div>
         </div>
       </div>
     </div>
@@ -89,7 +75,7 @@ function AuthLayout({
 }
 
 export function LoginPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
-  const { signIn, isLoaded } = useSignIn();
+  const auth = useContext(DemoContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -97,18 +83,20 @@ export function LoginPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLoaded || !signIn) return;
     setLoading(true);
     setError(null);
     try {
-      const result = await signIn.create({ identifier: email, password });
-      if (result.status === 'complete') {
-        onNavigate('dashboard');
-      } else {
-        setError('Additional verification required.');
-      }
+      const res = await fetch(`${API}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Login failed');
+      auth.signInWithToken(data.token, { id: data.userId, email: data.email, name: data.name });
+      onNavigate('dashboard');
     } catch (err: any) {
-      setError(err.errors?.[0]?.message || err.message || 'Sign in failed');
+      setError(err.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -138,7 +126,7 @@ export function LoginPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
         </div>
         <div className="space-y-2">
           <div className="flex justify-between pl-1">
-            <label className="text-xs font-bold text-text-muted uppercase tracking-widest">Password</label>
+            <label className="text-xs font-bold text-text-muted uppercase tracking-widest pl-1">Password</label>
             <button type="button" onClick={() => onNavigate('forgot-password')} className="text-xs font-bold text-primary hover:underline">Forgot?</button>
           </div>
           <div className="relative group">
@@ -147,16 +135,19 @@ export function LoginPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
               type="password" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••" 
+              placeholder="password" 
               className="w-full bg-white/5 border border-white/5 rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-primary/50 transition-all text-sm" 
             />
           </div>
         </div>
-        <Button className="w-full py-4 text-base font-bold rounded-xl mt-6" disabled={loading || !isLoaded}>
-          {loading ? <Loader2 className="size-5 animate-spin mx-auto" /> : <>Sign In to Account <ArrowRight className="ml-2 size-5" /></>}
+        <Button className="w-full py-4 text-base font-bold rounded-xl mt-6" disabled={loading}>
+          {loading ? <Loader2 className="size-5 animate-spin mx-auto" /> : <>Sign In <ArrowRight className="ml-2 size-5" /></>}
         </Button>
         <p className="text-center text-sm text-text-muted mt-6">
           New to DocuWeb? <button type="button" onClick={() => onNavigate('signup')} className="text-primary font-bold hover:underline">Create an account</button>
+        </p>
+        <p className="text-center text-sm text-text-muted mt-2">
+          Demo? <button type="button" onClick={() => { auth.enableDemo(); onNavigate('dashboard'); }} className="text-primary font-bold hover:underline">Use demo login</button>
         </p>
       </form>
     </AuthLayout>
@@ -164,7 +155,7 @@ export function LoginPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
 }
 
 export function SignupPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
-  const { signUp, isLoaded } = useSignUp();
+  const auth = useContext(DemoContext);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -173,20 +164,20 @@ export function SignupPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLoaded || !signUp) return;
     setLoading(true);
     setError(null);
     try {
-      const result = await signUp.create({ emailAddress: email, password, firstName: name });
-      if (result.status === 'complete') {
-        onNavigate('dashboard');
-      } else if (result.status === 'missing_requirements') {
-        // Email verification needed
-        await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-        setError('Check your email for a verification code.');
-      }
+      const res = await fetch(`${API}/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Signup failed');
+      auth.signInWithToken(data.token, { id: data.userId, email: data.email, name: data.name });
+      onNavigate('dashboard');
     } catch (err: any) {
-      setError(err.errors?.[0]?.message || err.message || 'Sign up failed');
+      setError(err.message || 'Signup failed');
     } finally {
       setLoading(false);
     }
@@ -235,16 +226,19 @@ export function SignupPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
               type="password" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Create a strong password" 
+              placeholder="6-16 characters" 
               className="w-full bg-white/5 border border-white/5 rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-primary/50 transition-all text-sm" 
             />
           </div>
         </div>
-        <Button className="w-full py-4 text-base font-bold rounded-xl mt-6" disabled={loading || !isLoaded}>
+        <Button className="w-full py-4 text-base font-bold rounded-xl mt-6" disabled={loading}>
           {loading ? <Loader2 className="size-5 animate-spin mx-auto" /> : <>Create Free Account <ArrowRight className="ml-2 size-5" /></>}
         </Button>
         <p className="text-center text-sm text-text-muted mt-6">
           Already have an account? <button type="button" onClick={() => onNavigate('login')} className="text-primary font-bold hover:underline">Sign In</button>
+        </p>
+        <p className="text-center text-sm text-text-muted mt-2">
+          Demo? <button type="button" onClick={() => { auth.enableDemo(); onNavigate('dashboard'); }} className="text-primary font-bold hover:underline">Use demo login</button>
         </p>
       </form>
     </AuthLayout>
@@ -255,7 +249,7 @@ export function ForgotPasswordPage({ onNavigate }: { onNavigate: (p: Page) => vo
   return (
     <AuthLayout 
       title="Reset Password" 
-      subtitle="We'll send you a link to get back into your account."
+      subtitle="Contact support to reset your password."
       onNavigate={onNavigate}
     >
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); }}>
