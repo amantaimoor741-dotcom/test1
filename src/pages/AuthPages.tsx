@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { 
   Sparkles, 
@@ -72,6 +72,55 @@ function AuthLayout({
       </div>
     </div>
   );
+}
+
+function GoogleButton({ label, onToken }: { label: string; onToken: (credential: string) => void }) {
+  const btnRef = useRef<HTMLDivElement>(null);
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
+  useEffect(() => {
+    if (!clientId || !btnRef.current) return;
+    const initGSI = () => {
+      if ((window as any).google?.accounts?.id) {
+        (window as any).google.accounts.id.initialize({
+          client_id: clientId,
+          callback: (response: any) => onToken(response.credential),
+        });
+        (window as any).google.accounts.id.renderButton(btnRef.current, {
+          theme: 'outline',
+          size: 'large',
+          width: '100%',
+          text: 'signin_with',
+          shape: 'rectangular',
+        });
+      }
+    };
+    // If GSI already loaded, init immediately
+    if ((window as any).google?.accounts?.id) {
+      initGSI();
+    } else {
+      // Otherwise wait for the script to load
+      (window as any).__gsiCallback = initGSI;
+    }
+  }, [clientId, onToken]);
+
+  return <div ref={btnRef} className="w-full" />;
+}
+
+async function handleGoogleLogin(credential: string, auth: any, onNavigate: any) {
+  try {
+    const res = await fetch(`${API}/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Google login failed');
+    auth.signInWithToken(data.token, { id: data.userId, email: data.email, name: data.name });
+    onNavigate('dashboard');
+  } catch (err: any) {
+    alert(err.message);
+  }
 }
 
 export function LoginPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
@@ -150,6 +199,14 @@ export function LoginPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
           Demo? <button type="button" onClick={() => { auth.enableDemo(); onNavigate('dashboard'); }} className="text-primary font-bold hover:underline">Use demo login</button>
         </p>
       </form>
+      <div className="mt-8 pt-6 border-t border-white/10">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex-1 h-px bg-white/10" />
+          <span className="text-xs text-text-muted uppercase tracking-wider">Or continue with</span>
+          <div className="flex-1 h-px bg-white/10" />
+        </div>
+        <GoogleButton label="Sign in with Google" onToken={(cred) => handleGoogleLogin(cred, auth, onNavigate)} />
+      </div>
     </AuthLayout>
   );
 }
@@ -241,6 +298,14 @@ export function SignupPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
           Demo? <button type="button" onClick={() => { auth.enableDemo(); onNavigate('dashboard'); }} className="text-primary font-bold hover:underline">Use demo login</button>
         </p>
       </form>
+      <div className="mt-8 pt-6 border-t border-white/10">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex-1 h-px bg-white/10" />
+          <span className="text-xs text-text-muted uppercase tracking-wider">Or continue with</span>
+          <div className="flex-1 h-px bg-white/10" />
+        </div>
+        <GoogleButton label="Sign up with Google" onToken={(cred) => handleGoogleLogin(cred, auth, onNavigate)} />
+      </div>
     </AuthLayout>
   );
 }
