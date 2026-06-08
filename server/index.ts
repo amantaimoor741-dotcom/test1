@@ -11,7 +11,7 @@ import projectRoutes from './routes/projects.ts';
 import adminRoutes from './routes/admin.ts';
 
 const app = express();
-const PORT = parseInt(process.env.SERVER_PORT || '4000', 10);
+const PORT = parseInt(process.env.PORT || process.env.SERVER_PORT || '4000', 10);
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
